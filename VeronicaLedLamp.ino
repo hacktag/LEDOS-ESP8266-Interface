@@ -3,25 +3,16 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include "front_end.h"
+#include "device.h"
 
-// Factory settings
-void factoryEEPROM();
-const char factoryUUID[6] = "Wd0pw"; // UUID | Used as a Version identificator
-const char factoryName[] = "Veronica's Lamp"; // Inital Human Readable Name
-const char factorySSID[] = "UTPL"; // Factory SSID for AP mode
-const char factoryPass[] = "GreenMoonBrick-1"; // Factory Pass for AP mode
-const char factoryDomain[] = "veronicalamp"; // Factory Local Domain Name
+#define LOCALDOMAIN "veronicalamp"
+#define FACTORY_RESET_PIN 5
+#define R_PIN 13
+#define G_PIN 12
+#define B_PIN 14
 
-// Front End
-const char html[] = "<!DOCTYPE html><html><head><meta charset=utf-8><meta content=\"width=device-width,initial-scale=1\" name=viewport><title></title><style>div,nav *{position:relative}i,nav .a:after,p{position:absolute}input,nav *{font-size:15px;background:#fff}nav *,p{text-align:center}body{background:-webkit-linear-gradient(90deg,#485563 10%,#29323c 90%);background:-moz-linear-gradient(90deg,#485563 10%,#29323c 90%);background:-ms-linear-gradient(90deg,#485563 10%,#29323c 90%);background:-o-linear-gradient(90deg,#485563 10%,#29323c 90%);background:linear-gradient(90deg,#485563 10%,#29323c 90%);font-family:\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:20px;color:#fff}div{width:100%;margin:0 auto}h1{font-size:32px;margin:10px 0}h2{font-size:24px;margin:5px 0}nav{overflow:hidden;padding:3px;margin:0}nav *{float:left;width:23.5%;height:15px;padding:10px 0;margin:0 0 10px 2%;border-radius:3px;cursor:pointer;color:#000}#cp,input,p{width:100%}nav :nth-child(4n+1){margin-left:0}nav .a:after{content:'';display:block;top:-2px;bottom:-2px;left:-2px;right:-2px;border-radius:7px;border:2px solid #7BC3FF}i,p{left:0}#cp{clear:both;display:block;height:200px;cursor:crosshair}.hdn,i{display:none}input{display:block;position:relative;margin:0 0 10px;padding:10px;border:none;border-radius:3px;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;-o-box-sizing:border-box;-ms-box-sizing:border-box;box-sizing:border-box;outline:0}input:focus{padding:8px;border-radius:3px;border:2px solid #7BC3FF}#set{cursor:pointer}i{top:0;right:0;bottom:0;background:rgba(0,0,0,.7)}p{top:50%;margin-top:-12px;color:#fff}@media only screen and (min-width:641px){div{width:640px}h1{font-size:48px;margin:30px 0}h2{font-size:36px;margin:10px 0}nav *{height:15px;padding:20px 0}nav .a:after{top:-3px;right:-3px;bottom:-3px;left:-3px;border-width:3px}input{padding:20px 10px;margin:0 0 20px}input:focus{padding:17px 7px;border-width:3px}}</style><body><div><h1></h1>"
-"<h2>Colors</h2><nav id=c><a id=c1 class=a></a> <a id=c2></a> <a id=c3></a> <a id=c4></a> <a id=c5></a> <a id=c6></a> <a id=c7></a> <a id=c8></a></nav><canvas id=cp></canvas><h2>Mode</h2><nav><a id=m1>Static Color</a> <a id=m2>3 Color Fade</a> <a id=m3>Data Stream</a> <a id=m4>Full Fade</a></nav>"
-"<h2 id=set>Settings</h2><form class=hdn action=/set method=post><b>Device name</b> <input name=name value=\""
-"\"> <b>Device Domain</b> <input name=domain value=\""
-"\"> <b>Network SSID</b> <input name=ssid value=\""
-"\"> <b>Network password</b> <input type=password name=password> <b>Confirm password</b> <input type=password name=confirm> <input type=submit value=Submit></form>"
-"</div><i><p></p></i><script>function n(){var e=new XMLHttpRequest;e.onreadystatechange=function(){if(4==e.readyState)if(200===e.status){document.querySelector(\"i\").style.display=\"none\";var t=JSON.parse(e.responseText);for(document.querySelector(\"title\").innerHTML=t.n,document.querySelector(\"h1\").innerHTML=t.n,b=0;b<t.c.length;++b)document.querySelector(\"#c\"+(b+1)).style.background=\"#\"+t.c[b];document.getElementById(\"m\"+t.m).className=\"a\"}else document.querySelector(\"i p\").innerHTML=\"Unable to process data from module. Check logs.\",document.querySelector(\"i\").style.display=\"inline-block\",console.log(e.status,e.responseText)},e.open(\"GET\",\"/status\",!0),e.send(null)}function p(e,t){if(g){var n,l;l=a.getBoundingClientRect(),t?(n=e.changedTouches[0].clientX-l.left,l=e.changedTouches[0].clientY-l.top):(n=e.clientX-l.left,l=e.clientY-l.top),h=n/a.clientWidth*360,k=l/a.clientHeight*100,document.querySelector(\"#c .a\").style.background=\"hsl(\"+h+\", 100%, \"+k+\"%)\",e.preventDefault()}}function r(e){return g=!0,t=document.querySelector(\"#c .a\").style.background,p(e),e.preventDefault(),!1}function u(e){if(g){g=null,clearInterval(q);var t=new XMLHttpRequest,l=new FormData;l.append(\"h\",h/360),l.append(\"s\",1),l.append(\"l\",k/100),t.open(\"POST\",\"/color/hsl\",!0),t.send(l),q=setInterval(n,5e3),e.preventDefault()}}var f,b,q,a,h,k,l,m;for(f=document.querySelectorAll(\"nav a\"),b=0;b<f.length;++b)f[b].onclick=function(){this.parentNode.querySelector(\".a\").className=\"\",this.className=\"a\"};for(b=1;5>b;++b)document.getElementById(\"m\"+b).onclick=function(){var e=b;return function(){var t=new XMLHttpRequest;t.open(\"POST\",\"/mode\",!0),t.send(\"m=\"+e),this.parentNode.querySelector(\".a\").className=\"\",this.className=\"a\"}}();for(document.querySelector(\"#set\").onclick=function(){document.querySelector(\"form\").classList.toggle(\"hdn\"),window.location=\"#set\"},n(),q=setInterval(n,5e3),a=document.getElementById(\"cp\"),f=a.getContext(\"2d\"),a.width=a.clientWidth,a.height=a.clientHeight,m=0;m<=a.clientHeight;++m)for(l=0;l<a.clientWidth;++l)h=l/a.clientWidth*360,k=m/a.clientHeight*100,f.fillStyle=\"hsl(\"+h+\", 100%, \"+k+\"%)\",f.fillRect(l,m,1,1);var g=null,t;a.onmousedown=r,a.onmousemove=p,document.onmouseup=u,a.addEventListener(\"touchstart\",r,!1),a.addEventListener(\"touchmove\",function(e){p(e,!0)},!1),a.addEventListener(\"touchend\",u,!1),a.addEventListener(\"touchcancel\",function(){g=null,document.querySelector(\"#c .a\").style.background=t},!1);</script>";
-const char json[] = "{\"c\": [\"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\"], \"m\": \"%d\", \"n\": \"%s\", \"s\": \"%s\"}";
-const chat notFoundHtml[] = "<html><head><meta charset=utf-8><title>Error 404 Not Found</title></head><style>body {font-family: arial,sans-serif}</style><body><blockquote><h2>Error 404 Not Found</h2><p>The page you are looking for does not exist";
+const char json[] = "{\"a\": \"%d\", \"c\": [\"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\"], \"m\": \"%d\", \"n\": \"%s\", \"s\": \"%s\", \"u\": \"%d:%d:%d\", \"w\": \"%d\"}";
 
 // Front End Initial colors
 const char white[3]  = {255, 255, 255};
@@ -33,177 +24,373 @@ const char teal[3] = {0, 128, 128};
 const char lilac[3] = {128, 0, 128};
 const char orange[3] = {255, 127, 0};
 
-byte WiFiMode, OpMode;
-char ssid[64], deviceName[64];
-
+// Network Stack
 MDNSResponder mdns;
-ESP8266WebServer server (80);
-
+ESP8266WebServer server(80);
 void rootPath();
 void statusPath();
 void setPath();
 void setColorHSLPath();
 void setColorRGBPath();
-void notFoundPath();
+
+// Physical Access Trigger
+unsigned long lastPhysicalAccess = 0;
+
+// Effect stages
+int mode = 0, stage = -1, speed = 2;
+byte color[3][3];
+
+// LED colors
+byte m_R, m_G, m_B;
+
+// Helper functions
+int hex2bin( const char * );
+int urldecode( const char * );
+
+// ESP Base Device LIbrary
+Base::Device device;
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println();
-  
-  // EEPROM Space Usage
-  // EEPROM UUID Mask - 5 bytes + 1 byte \0 | Used to verify & initialise EEPROM
-  // Current operating mode - 1 byte | [ Off, Static Color, 3 Color Fade, Data Stream, Full Fade ]
-  // Current WiFi Mode - 1 byte      | [ AP, Client ]
-  // Device Name - 64 bytes          | Human readable name of the device
-  // SSID - 64 bytes                 | SSID of the network to connect to when in client mode
-  // Password - 64 bytes             | WiFi Password of the network to connect to when in client mode
-  // Domain Name - 64 bytes          | Domain name for local resolution 
-  // ------------------------------- | Total memory used for base purposes - 264 bytes
-  // 8 colors - 24 bytes             | * colors with 3 bytes each
-  // ------------------------------- | TOTAL: 288 bytes
-  // Additional EEPROM data should be appended to the end and described
-  EEPROM.begin(288);
-  
-  // EEPROM Intialisation
-  for(int i = 0; i < 5; ++i) {
-    // Verify EEPROM UUID
-    if ( EEPROM.read( i ) != factoryUUID[i] ) {
-      Serial.println("Initialising EEPROM");
-      factoryEEPROM();
-      break; 
+    // Boot the module
+    if ( device.boot() ) // Factory defaults restored during boot
+    {
+        EEPROM.begin(48);
+        factoryEEPROM();
+        device.reboot();
     }
-  }
-  
-  // Initialise WiFi
-  OpMode = EEPROM.read(6);
-  WiFiMode = EEPROM.read(7);
-  
-  char password[64], domain[64];
-  EEPROM.get( 8, deviceName );
-  EEPROM.get( 72, ssid );
-  EEPROM.get( 136, password );
-  EEPROM.get( 200, domain );
 
-wiFiStartUp:  
-  if ( WiFiMode == 0 ) { // AP
-    Serial.println("Configuring Access Point");
-    if( password[0] == '\0' ) {
-      WiFi.softAP(ssid);
-    } else {
-      WiFi.softAP( ssid, password );
-    }
-  } else if( WiFiMode == 1 ) { // Client
-    Serial.println("Connecting to WiFi Network");
-    if( password[0] == '\0' ) {
-      WiFi.begin(ssid);
-    } else {
-      WiFi.begin( ssid, password );
-    }
-  }
-  
-  // Wait for connection
-  while ( WiFi.status() != WL_CONNECTED ) {
-     // If after 30 seconds the module has not been able to connect to a WiFi
-    if( WiFiMode == 1 && millis() >= 10000 ) {
-      // Fallback to AP mode with the current settings
-      Serial.println("Unable to connect to network.");
-      WiFi.disconnect();
-      WiFiMode = 0;
-      goto wiFiStartUp;
-    } else if( millis() >= 20000 ) {
-      Serial.println("Emergency escape. Attempting to continue!");
-      break; 
-    }
-    
-    delay ( 1000 );
-    Serial.print (".");
-  }
-  
-  // Report IP Address
-  IPAddress IP;
-  if ( WiFiMode == 0 ) {
-    IP = WiFi.softAPIP();
-  } else if( WiFiMode == 1 ) {
-    Serial.print("Connected to: ");
-    Serial.println(ssid);
-    IP = WiFi.localIP();
-  }
-  Serial.print("IP address: ");
-  Serial.println(IP);
-  
-  // Initialise MDNS Responder
-  if ( mdns.begin ( domain, IP ) ) {
-    Serial.println ("MDNS responder started");
-  }
+    // Establish connectivity
+    device.initWiFi();
 
-  // Initialise the Web Server
-  server.on ( "/", rootPath );
-  server.on ( "/set", setPath );
-  server.on ( "/status", statusPath );
-  server.on ( "/color/hls", setColorHSLPath );
-  server.on ( "/color/rgb", setColorRGBPath );
-  server.onNotFound ( notFoundPath );
-  server.begin();
-  Serial.println("Initialised HTTP server");
-  
-  Serial.println("done");
+    EEPROM.begin(48);
+
+    // Initialise pins
+    pinMode( FACTORY_RESET_PIN, INPUT );
+    pinMode( R_PIN, OUTPUT );
+    pinMode( G_PIN, OUTPUT );
+    pinMode( B_PIN, OUTPUT );
+
+    // Attach an interrupt to the Factory Reset Pin for Access Control
+    attachInterrupt(FACTORY_RESET_PIN, physicalAccess, RISING);
+
+    // Initialise MDNS Responder
+    if ( mdns.begin ( LOCALDOMAIN ) ) {
+        Serial.println ("MDNS responder started");
+    }
+
+    // Initialise the Web Server
+    server.on( "/", rootPath );
+    server.on( "/set", HTTP_POST, setPath );
+    server.on( "/status", HTTP_GET, statusPath );
+    server.on( "/color/hls", HTTP_POST, setColorHSLPath );
+    server.on( "/color/rgb", HTTP_POST, setColorRGBPath );
+    server.onNotFound(rootPath);
+    server.begin();
+    Serial.println("Initialised HTTP server");
+
+    Serial.println("done");
 }
 
 void loop() {
-  mdns.update();
-  server.handleClient();
+    if( mode == 0 ) {                       // OFF
+        R(0);
+        G(0);
+        B(0);
+    } else if( mode == 1 ) {                // 2 Color Fade
+    } else if( mode == 2 ) {                // Flash
+    } else if( mode == 3 ) {                // Full Fade
+        switch(stage)
+        {
+        case -1:
+            if( R() == 255 ) R(254);
+            if( G() == 255 ) G(254);
+            if( B() == 255 ) R(254);
+            ++stage;
+            break;
+        case 0:
+            if( G( G()+1 ) == 255 ) ++stage;
+            break;
+        case 1:
+            if( R( R()-1 ) == 0 ) ++stage;
+            break;
+        case 2:
+            if( B( B()+1 ) == 255 ) ++stage;
+            break;
+        case 3:
+            if( G( G()-1 ) == 0 ) ++stage;
+            break;
+        case 4:
+            if( R( R()+1 ) == 255 ) ++stage;
+            break;
+        case 5:
+            if( B( B()-1 ) == 0 ) ++stage;
+            break;
+        }
+        if( stage == 6 ) stage = 0;
+    } else if( mode == 4 ) {                // Static color
+        if( stage == -1 ) {
+            EEPROM.get( 1 + EEPROM.read(25) * 3, color[0] );
+            ++stage;
+        }
+        R(color[0][0]);
+        G(color[0][1]);
+        B(color[0][2]);
+    } else if( mode == 5 ) {                // 3 Color Fade
+    } else if( mode == 6 ) {                // Data Stream
+    }
+
+    // Handle services
+    mdns.update();
+    server.handleClient();
 }
 
 void factoryEEPROM() {
-  EEPROM.put( 0, factoryUUID ); // UUID
-  EEPROM.write( 6, 0 ); // Operating mode / Off
-  EEPROM.write( 7, 1 ); // WiFi mode / Client
-  EEPROM.put( 8, factoryName ); // Device human readable name
-  EEPROM.put( 72, factorySSID ); // SSID for Factory AP mode
-  EEPROM.put( 136, factoryPass ); // Password for Factory AP mode
-  EEPROM.put( 200, factoryDomain ); // Factory Domain Name
-  EEPROM.put( 264 + 0 * 3, white ); // White
-  EEPROM.put( 264 + 1 * 3, yellow ); // yellow
-  EEPROM.put( 264 + 2 * 3, green ); // green
-  EEPROM.put( 264 + 3 * 3, blue ); // blue
-  EEPROM.put( 264 + 4 * 3, red ); // red
-  EEPROM.put( 264 + 5 * 3, teal ); // teal
-  EEPROM.put( 264 + 6 * 3, lilac ); // lilac
-  EEPROM.put( 264 + 7 * 3, orange ); // orange
-  EEPROM.commit();
+    EEPROM.write( 0, 0 ); // Current mode = OFF
+
+    EEPROM.put( 1 + 0 * 3, white ); // White
+    EEPROM.put( 1 + 1 * 3, yellow ); // yellow
+    EEPROM.put( 1 + 2 * 3, green ); // green
+    EEPROM.put( 1 + 3 * 3, blue ); // blue
+    EEPROM.put( 1 + 4 * 3, red ); // red
+    EEPROM.put( 1 + 5 * 3, teal ); // teal
+    EEPROM.put( 1 + 6 * 3, lilac ); // lilac
+    EEPROM.put( 1 + 7 * 3, orange ); // orange
+
+    EEPROM.write( 25, 0 ); // Currently active color is 0
+
+    EEPROM.write( 26, 0 ); // Current speed setting is 0
+
+    EEPROM.commit();
 }
 
 void rootPath() {
-  server.send( 200, "text/html", html );
+    server.send( 200, "text/html", html );
 }
 
 void statusPath() {
-  char temp[sizeof(json) + 8 * 6 + 129];
-  
-  // Stores the colors loaded from EEPROM
-  byte c[8][3];
-  
-  // Get colors from EEPROM
-  for(int i = 0; i < 8; ++i) {
-    EEPROM.get( 264 + i * 3, c[i] );
-  }
-  
-  snprintf(temp, sizeof(json) + 8 * 6 + 129, json, c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2], c[3][0], c[3][1], c[3][2], c[4][0], c[4][1], c[4][2], c[5][0], c[5][1], c[5][2], c[6][0], c[6][1], c[6][2], c[7][0], c[7][1], c[7][2], (int)OpMode, deviceName, ssid );
-  server.send( 200, "text/html", temp );
+    char temp[sizeof(json) + 8 * 6 + 129];
+
+    // Currently active color
+    int a = EEPROM.read(25);
+
+    // Stores the colors loaded from EEPROM
+    byte c[8][3];
+
+    // Get colors from EEPROM
+    for(int i = 0; i < 8; ++i) {
+        EEPROM.get( 1 + i * 3, c[i] );
+    }
+
+    int sec = millis() / 1000;
+    int min = sec / 60;
+    int hr = min / 60;
+
+    snprintf(temp, sizeof(json) + 8 * 6 + 129, json, a, c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2], c[3][0], c[3][1], c[3][2], c[4][0], c[4][1], c[4][2], c[5][0], c[5][1], c[5][2], c[6][0], c[6][1], c[6][2], c[7][0], c[7][1], c[7][2], mode, device.name().c_str(), device.ssid().c_str(), hr, min, sec % 60, (int)(device.mode() == WIFI_STA) + 1);
+    server.send( 200, "text/html", temp );
 }
 
 void setPath() {
-  
+    String password, temp, error="";
+    char temp2[64];
+    bool storeConfig = false;
+    for(int i = 0; i < server.args(); ++i) {
+        if ( server.argName(i) == "p") { // Network password
+            temp = server.arg(i);
+            temp.remove(63);
+            urldecode(temp2, temp.c_str());
+            password = temp2;
+            if( password.length() == 0 ) break;
+            error = "Passwords don't match!";
+        } else if ( server.argName(i) == "c") { // Network password confirmation
+            temp = server.arg(i);
+            temp.remove(63);
+            urldecode(temp2, temp.c_str());
+            if( password == temp2 ) {
+                error = "";
+                device.setPassword(password);
+                storeConfig = true;
+            } else break;
+        }
+    }
+    if( error.length() == 0 ) {
+        for(int i = 0; i < server.args(); ++i) {
+            if ( server.argName(i) == "a" ) { // Current color
+                EEPROM.write( 25, server.arg(i).toInt() % 255 );
+            } else if ( server.argName(i) == "m") { // Current mode
+                int wmode = server.arg(i).toInt() % 255;
+                if ( wmode == 7 ) { // Speed Toggle
+                    speed *= 2;
+                    if( speed >= 256 ) speed = 2;
+                } else {
+                    // EEPROM.write( 0, wmode );
+                    mode = wmode;
+                    // Prepare the mode for initialization
+                    stage = -1;
+                    Serial.println(mode);
+                }
+            } else if ( server.argName(i) == "w") { // Current WiFi mode
+                int wmode = (unsigned int)server.arg(i).toInt() % 255;
+                if ( wmode == 1 ) {
+                    device.setMode( WIFI_AP );
+                } else if ( wmode == 2 ) {
+                    device.setMode( WIFI_STA );
+                } else if ( wmode == 3 ) {
+                    device.setMode( WIFI_AP );
+                    device.setPassword("");
+                } else if ( wmode == 4 ) {
+                    device.setMode( WIFI_STA );
+                    device.setPassword("");
+                }
+                storeConfig = true;
+            } else if ( server.argName(i) == "n") { // Device Human Readable name
+                temp = server.arg(i);
+                temp.remove(63);
+                urldecode(temp2, temp.c_str());
+                device.setName(temp2);
+                storeConfig = true;
+            } else if ( server.argName(i) == "s") { // Network SSID
+                temp = server.arg(i);
+                temp.remove(63);
+                urldecode(temp2, temp.c_str());
+                device.setSSID(temp2);
+                storeConfig = true;
+            } else if ( server.argName(i) == "d") { // Domain name
+                temp = server.arg(i);
+                temp.remove(63);
+                urldecode(temp2, temp.c_str());
+                // Ignore
+            } else { // Color input
+                for(int j = 0; j < 8; ++j) {
+                    if( server.argName(i) == (String("c") + j) ) {
+
+                      // Convert hex color to byte array
+                      temp = server.arg(i);
+                      temp.remove(6);
+                      const char *src = temp.c_str();
+                      byte color[3];
+                      for(int k = 0; k < 3; ++k) {
+                          color[k] = hex2bin(src);
+                          src += 2;
+                      }
+
+                      EEPROM.put( 1 + j * 3, color );
+                    }
+                }
+            }
+        }
+    }
+    if( error.length() == 0 && storeConfig &&
+        lastPhysicalAccess != 0 &&
+        millis() - lastPhysicalAccess <= 30 * 1000 )
+        error = "You need to press and hold the Factory Reset Button for 2 seconds before you can change system settings!";
+    if( error.length() > 0) {
+        server.sendHeader("Refresh", "5;url=/");
+        server.send(400, "text/plain", error);
+    } else {
+        if( storeConfig ) {
+            device.store();
+            device.initWiFi();
+        }
+        EEPROM.commit();
+        server.sendHeader("Redirect", "/");
+        server.send(200);
+    }
+}
+
+byte R() {
+    return m_R / 4;
+}
+
+byte G() {
+    return m_G / 4;
+}
+
+byte B() {
+    return m_B / 4;
+}
+
+byte R(byte r) {
+    analogWrite(R_PIN, r * 4);
+    return (m_R = r);
+}
+
+byte G(byte g) {
+    analogWrite(G_PIN, g * 4);
+    return (m_G = g);
+}
+
+byte B(byte b) {
+    analogWrite(B_PIN, b * 4);
+    return (m_B = b);
 }
 
 void setColorHSLPath() {
-  
+
 }
 
 void setColorRGBPath() {
-  
+
 }
 
-void notFoundPath() {
-  server.send( 404, "text/html", html );
+void physicalAccess() {
+    lastPhysicalAccess = millis();
+    Serial.println("Full Access Authorised");
+    while( digitalRead(FACTORY_RESET_PIN) ) {
+        if( millis() - lastPhysicalAccess >= 9500 ) {
+            device.factoryReset();
+            factoryEEPROM();
+            device.reboot();
+        }
+    }
+}
+
+int hex2bin( const char *s )
+{
+  int ret = 0;
+  int i;
+  for( i=0; i<2; i++ )
+  {
+    char c = *s++;
+    int n=0;
+    if( '0'<=c && c<='9' )
+      n = c-'0';
+    else if( 'a'<=c && c<='f' )
+      n = 10 + c-'a';
+    else if( 'A'<=c && c<='F' )
+      n = 10 + c-'A';
+    ret = n + ret*16;
+  }
+  return ret;
+}
+
+void urldecode(char *dst, const char *src)
+{
+    char a, b,c;
+    if (dst==NULL) return;
+    while (*src) {
+        if ((*src == '%') &&
+           ((a = src[1]) && (b = src[2])) &&
+           (isxdigit(a) && isxdigit(b))) {
+            if (a >= 'a')
+                a -= 'a'-'A';
+            if (a >= 'A')
+                a -= ('A' - 10);
+            else
+                a -= '0';
+            if (b >= 'a')
+                b -= 'a'-'A';
+            if (b >= 'A')
+                b -= ('A' - 10);
+            else
+                b -= '0';
+            *dst++ = 16*a+b;
+            src+=3;
+        }
+        else {
+            c = *src++;
+            if(c=='+')c=' ';
+            *dst++ = c;
+        }
+    }
+    *dst++ = '\0';
 }
