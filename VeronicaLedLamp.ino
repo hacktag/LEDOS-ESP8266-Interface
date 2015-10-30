@@ -8,9 +8,6 @@
 
 #define LOCALDOMAIN "veronicalamp"
 #define FACTORY_RESET_PIN 5
-#define R_PIN 13
-#define G_PIN 12
-#define B_PIN 14
 
 const char json[] = "{\"a\": \"%d\", \"c\": [\"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\"], \"m\": \"%d\", \"n\": \"%s\", \"s\": \"%s\", \"u\": \"%d:%d:%d\", \"w\": \"%d\"}";
 
@@ -66,9 +63,6 @@ void setup() {
 
     // Initialise pins
     pinMode( FACTORY_RESET_PIN, INPUT );
-    pinMode( R_PIN, OUTPUT );
-    pinMode( G_PIN, OUTPUT );
-    pinMode( B_PIN, OUTPUT );
 
     // Attach an interrupt to the Factory Reset Pin for Access Control
     attachInterrupt(FACTORY_RESET_PIN, physicalAccess, RISING);
@@ -92,53 +86,6 @@ void setup() {
 }
 
 void loop() {
-    if( mode == 0 ) {                       // OFF
-        R(0);
-        G(0);
-        B(0);
-    } else if( mode == 1 ) {                // 2 Color Fade
-    } else if( mode == 2 ) {                // Flash
-    } else if( mode == 3 ) {                // Full Fade
-        switch(stage)
-        {
-        case -1:
-            if( R() == 255 ) R(254);
-            if( G() == 255 ) G(254);
-            if( B() == 255 ) R(254);
-            ++stage;
-            break;
-        case 0:
-            if( G( G()+1 ) == 255 ) ++stage;
-            break;
-        case 1:
-            if( R( R()-1 ) == 0 ) ++stage;
-            break;
-        case 2:
-            if( B( B()+1 ) == 255 ) ++stage;
-            break;
-        case 3:
-            if( G( G()-1 ) == 0 ) ++stage;
-            break;
-        case 4:
-            if( R( R()+1 ) == 255 ) ++stage;
-            break;
-        case 5:
-            if( B( B()-1 ) == 0 ) ++stage;
-            break;
-        }
-        if( stage == 6 ) stage = 0;
-    } else if( mode == 4 ) {                // Static color
-        if( stage == -1 ) {
-            EEPROM.get( 1 + EEPROM.read(25) * 3, color[0] );
-            ++stage;
-        }
-        R(color[0][0]);
-        G(color[0][1]);
-        B(color[0][2]);
-    } else if( mode == 5 ) {                // 3 Color Fade
-    } else if( mode == 6 ) {                // Data Stream
-    }
-
     // Handle services
     mdns.update();
     server.handleClient();
@@ -310,17 +257,20 @@ byte B() {
 }
 
 byte R(byte r) {
-    analogWrite(R_PIN, r * 4);
+    Serial.print("R ");
+    Serial.println(r);
     return (m_R = r);
 }
 
 byte G(byte g) {
-    analogWrite(G_PIN, g * 4);
+    Serial.print("G ");
+    Serial.println(g);
     return (m_G = g);
 }
 
 byte B(byte b) {
-    analogWrite(B_PIN, b * 4);
+    Serial.print("B ");
+    Serial.println(b);
     return (m_B = b);
 }
 
