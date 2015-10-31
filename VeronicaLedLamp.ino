@@ -163,6 +163,11 @@ void setPath() {
         for(int i = 0; i < server.args(); ++i) {
             if ( server.argName(i) == "a" ) { // Current color
                 EEPROM.write( 25, server.arg(i).toInt() % 255 );
+                char preset[3], color[6];
+                EEPROM.get(1 + server.arg(i).toInt() % 8 * 3, preset);
+                snprintf(color, 6, "%02x%02x%02x", preset[0], preset[1], preset[2]);
+                Serial.print('b');
+                Serial.println(color);
             } else if ( server.argName(i) == "m") { // Current mode
                 int wmode = server.arg(i).toInt() % 255;
                 if ( wmode == 7 ) { // Speed Toggle
@@ -213,6 +218,8 @@ void setPath() {
                       // Convert hex color to byte array
                       temp = server.arg(i);
                       temp.remove(6);
+                      Serial.print('b');
+                      Serial.println(temp);
                       const char *src = temp.c_str();
                       byte color[3];
                       for(int k = 0; k < 3; ++k) {
