@@ -163,11 +163,18 @@ void setPath() {
         for(int i = 0; i < server.args(); ++i) {
             if ( server.argName(i) == "a" ) { // Current color
                 EEPROM.write( 25, server.arg(i).toInt() % 255 );
-                char preset[3], color[6];
+                char color[6];
+                byte preset[3];
                 EEPROM.get(1 + server.arg(i).toInt() % 8 * 3, preset);
-                snprintf(color, 6, "%02x%02x%02x", preset[0], preset[1], preset[2]);
-                Serial.print('b');
-                Serial.println(color);
+//                snprintf(color, 6, "%02x%02x%02x", preset[0], preset[1], preset[2]);
+//                Serial.print('b');
+//                Serial.println(color);                
+                Serial.print("c ");
+                Serial.print(int(preset[0]));
+                Serial.print(" ");
+                Serial.print(int(preset[1]));
+                Serial.print(" ");
+                Serial.println(int(preset[2]));
             } else if ( server.argName(i) == "m") { // Current mode
                 int wmode = server.arg(i).toInt() % 255;
                 if ( wmode == 7 ) { // Speed Toggle
