@@ -177,15 +177,38 @@ void setPath() {
                 Serial.println(int(preset[2]));
             } else if ( server.argName(i) == "m") { // Current mode
                 int wmode = server.arg(i).toInt() % 255;
-                if ( wmode == 7 ) { // Speed Toggle
-                    speed *= 2;
-                    if( speed >= 256 ) speed = 2;
-                } else {
-                    // EEPROM.write( 0, wmode );
-                    mode = wmode;
-                    // Prepare the mode for initialization
-                    stage = -1;
+                 // EEPROM.write( 0, wmode );
+                mode = wmode;
+                // Prepare the mode for initialization
+                stage = -1;
+                switch (mode) {
+                  case 0: 
+                    Serial.println("effect stop");
+                    break;
+                  case 1: 
+                    Serial.println("effect HSV fade");
+                    break;
+                  case 2: 
+                    Serial.println("effect duration up");
+                    break;
+                  case 3: 
+                    Serial.println("effect brightness up");
+                    break;
+                  case 4: 
+                    Serial.println("shutdown");
+                    break;
+                  case 5: 
+                    Serial.println("effect random fade");
+                    break;
+                  case 6: 
+                    Serial.println("effect duration down");
+                    break;
+                  case 7: 
+                    Serial.println("effect brightness down");
+                    break;
+                  default:
                     Serial.println(mode);
+                    break;
                 }
             } else if ( server.argName(i) == "w") { // Current WiFi mode
                 int wmode = (unsigned int)server.arg(i).toInt() % 255;
