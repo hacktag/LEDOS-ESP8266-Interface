@@ -189,7 +189,7 @@ void setPath() {
                     Serial.println("effect HSV fade");
                     break;
                   case 2: 
-                    Serial.println("effect duration up");
+                    Serial.println("effect duration down");
                     break;
                   case 3: 
                     Serial.println("effect brightness up");
@@ -201,7 +201,7 @@ void setPath() {
                     Serial.println("effect random fade");
                     break;
                   case 6: 
-                    Serial.println("effect duration down");
+                    Serial.println("effect duration up");
                     break;
                   case 7: 
                     Serial.println("effect brightness down");
