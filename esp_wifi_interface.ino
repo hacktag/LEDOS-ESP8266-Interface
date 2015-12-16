@@ -5,9 +5,10 @@
 #include <ESP8266mDNS.h>
 #include "front_end.h"
 #include "device.h"
+#include "factory_config.h"
 
-#define LOCALDOMAIN "veronicalamp"
-#define FACTORY_RESET_PIN 5
+#include <DNSServer.h>
+#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 const char json[] = "{\"a\": \"%d\", \"c\": [\"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\", \"%02x%02x%02x\"], \"m\": \"%d\", \"n\": \"%s\", \"s\": \"%s\", \"u\": \"%d:%d:%d\", \"w\": \"%d\"}";
 
@@ -16,7 +17,7 @@ const char white[3]  = {255, 255, 255};
 const char yellow[3] = {255, 255, 0};
 const char green[3] = {0, 232, 66};
 const char blue[3] = {0, 174, 255};
-const char red[3] = {255, 0, 66};
+const char red[3] = {255, 0, 66};\
 const char teal[3] = {0, 128, 128};
 const char lilac[3] = {128, 0, 128};
 const char orange[3] = {255, 127, 0};
@@ -61,12 +62,6 @@ void setup() {
 
     EEPROM.begin(48);
 
-    // Initialise pins
-    pinMode( FACTORY_RESET_PIN, INPUT );
-
-    // Attach an interrupt to the Factory Reset Pin for Access Control
-    attachInterrupt(FACTORY_RESET_PIN, physicalAccess, RISING);
-
     // Initialise MDNS Responder
     if ( mdns.begin ( LOCALDOMAIN ) ) {
         Serial.println ("MDNS responder started");
@@ -83,6 +78,8 @@ void setup() {
     Serial.println("Initialised HTTP server");
 
     Serial.println("done");
+    Serial.println();
+    
 }
 
 void loop() {
@@ -132,7 +129,7 @@ void statusPath() {
     int min = sec / 60;
     int hr = min / 60;
 
-    snprintf(temp, sizeof(json) + 8 * 6 + 129, json, a, c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2], c[3][0], c[3][1], c[3][2], c[4][0], c[4][1], c[4][2], c[5][0], c[5][1], c[5][2], c[6][0], c[6][1], c[6][2], c[7][0], c[7][1], c[7][2], mode, device.name().c_str(), device.ssid().c_str(), hr, min, sec % 60, (int)(device.mode() == WIFI_STA) + 1);
+    snprintf(temp, sizeof(json) + 8 * 6 + 129, json, a, c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2], c[3][0], c[3][1], c[3][2], c[4][0], c[4][1], c[4][2], c[5][0], c[5][1], c[5][2], c[6][0], c[6][1], c[6][2], c[7][0], c[7][1], c[7][2], mode, "Moodlight Beta", WiFi.SSID(), hr, min, sec % 60, 1);
     server.send( 200, "text/html", temp );
 }
 
@@ -140,25 +137,6 @@ void setPath() {
     String password, temp, error="";
     char temp2[64];
     bool storeConfig = false;
-    for(int i = 0; i < server.args(); ++i) {
-        if ( server.argName(i) == "p") { // Network password
-            temp = server.arg(i);
-            temp.remove(63);
-            urldecode(temp2, temp.c_str());
-            password = temp2;
-            if( password.length() == 0 ) break;
-            error = "Passwords don't match!";
-        } else if ( server.argName(i) == "c") { // Network password confirmation
-            temp = server.arg(i);
-            temp.remove(63);
-            urldecode(temp2, temp.c_str());
-            if( password == temp2 ) {
-                error = "";
-                device.setPassword(password);
-                storeConfig = true;
-            } else break;
-        }
-    }
     if( error.length() == 0 ) {
         for(int i = 0; i < server.args(); ++i) {
             if ( server.argName(i) == "a" ) { // Current color
@@ -210,31 +188,11 @@ void setPath() {
                     Serial.println(mode);
                     break;
                 }
-            } else if ( server.argName(i) == "w") { // Current WiFi mode
-                int wmode = (unsigned int)server.arg(i).toInt() % 255;
-                if ( wmode == 1 ) {
-                    device.setMode( WIFI_AP );
-                } else if ( wmode == 2 ) {
-                    device.setMode( WIFI_STA );
-                } else if ( wmode == 3 ) {
-                    device.setMode( WIFI_AP );
-                    device.setPassword("");
-                } else if ( wmode == 4 ) {
-                    device.setMode( WIFI_STA );
-                    device.setPassword("");
-                }
-                storeConfig = true;
             } else if ( server.argName(i) == "n") { // Device Human Readable name
                 temp = server.arg(i);
                 temp.remove(63);
                 urldecode(temp2, temp.c_str());
                 device.setName(temp2);
-                storeConfig = true;
-            } else if ( server.argName(i) == "s") { // Network SSID
-                temp = server.arg(i);
-                temp.remove(63);
-                urldecode(temp2, temp.c_str());
-                device.setSSID(temp2);
                 storeConfig = true;
             } else if ( server.argName(i) == "d") { // Domain name
                 temp = server.arg(i);
@@ -263,16 +221,11 @@ void setPath() {
             }
         }
     }
-    if( error.length() == 0 && storeConfig &&
-        lastPhysicalAccess != 0 &&
-        millis() - lastPhysicalAccess <= 30 * 1000 )
-        error = "You need to press and hold the Factory Reset Button for 2 seconds before you can change system settings!";
     if( error.length() > 0) {
         server.sendHeader("Refresh", "5;url=/");
         server.send(400, "text/plain", error);
     } else {
         if( storeConfig ) {
-            device.store();
             device.initWiFi();
         }
         EEPROM.commit();
@@ -317,18 +270,6 @@ void setColorHSLPath() {
 
 void setColorRGBPath() {
 
-}
-
-void physicalAccess() {
-    lastPhysicalAccess = millis();
-    Serial.println("Full Access Authorised");
-    while( digitalRead(FACTORY_RESET_PIN) ) {
-        if( millis() - lastPhysicalAccess >= 9500 ) {
-            device.factoryReset();
-            factoryEEPROM();
-            device.reboot();
-        }
-    }
 }
 
 int hex2bin( const char *s )

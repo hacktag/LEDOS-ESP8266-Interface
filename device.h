@@ -15,7 +15,6 @@ public:
   void load();
   void reboot();
   void initWiFi();
-  void factoryReset();
 
   // Accessors
   IPAddress ip();
