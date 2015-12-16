@@ -77,7 +77,7 @@ bool Device::boot()
 void Device::initWiFi()
 {   
     WiFiManager wifiManager;
-    wifiManager.autoConnect(FACTORY_SSID);
+    wifiManager.autoConnect(FACTORY_NAME);
     Serial.println("connected...yeey :)");
 }
 

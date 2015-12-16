@@ -129,7 +129,7 @@ void statusPath() {
     int min = sec / 60;
     int hr = min / 60;
 
-    snprintf(temp, sizeof(json) + 8 * 6 + 129, json, a, c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2], c[3][0], c[3][1], c[3][2], c[4][0], c[4][1], c[4][2], c[5][0], c[5][1], c[5][2], c[6][0], c[6][1], c[6][2], c[7][0], c[7][1], c[7][2], mode, "Moodlight Beta", WiFi.SSID(), hr, min, sec % 60, 1);
+    snprintf(temp, sizeof(json) + 8 * 6 + 129, json, a, c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2], c[3][0], c[3][1], c[3][2], c[4][0], c[4][1], c[4][2], c[5][0], c[5][1], c[5][2], c[6][0], c[6][1], c[6][2], c[7][0], c[7][1], c[7][2], mode, FACTORY_NAME, WiFi.SSID().c_str(), hr, min, sec % 60, 1);
     server.send( 200, "text/html", temp );
 }
 
